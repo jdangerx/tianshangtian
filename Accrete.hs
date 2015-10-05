@@ -16,7 +16,7 @@ type SuperChar = T.Tree Component
 
 combine :: SuperChar -> SuperChar -> SuperChar
 combine (T.Node (P _) _) old = old
-combine new@(T.Node LR [l, r]) old =
+combine new@(T.Node LR [l, r]) old@(T.Node _ [a, b]) =
   case old of
    T.Node rl@(P _) _ -> if T.rootLabel l == rl || T.rootLabel r == rl
                        then new else old
@@ -25,8 +25,14 @@ combine new@(T.Node LR [l, r]) old =
                       | otherwise -> old
    T.Node UD [u', d'] | l == u' || l == d' -> T.Node LR [old, r]
                       | r == u' || r == d' -> T.Node LR [l, old]
-                      | otherwise -> old
-combine new@(T.Node UD [u, d]) old =
+                      | otherwise ->
+                        let newA = combine new a
+                            newB = combine new b
+                        in
+                         if newA /= a then old {T.subForest = [newA, b]}
+                         else if newB /= b then old {T.subForest = [a, newB]}
+                              else old
+combine new@(T.Node UD [u, d]) old@(T.Node _ [a, b]) =
   case old of
    T.Node rl@(P _) _ -> if T.rootLabel u == rl || T.rootLabel d == rl
                        then new else old
@@ -35,7 +41,13 @@ combine new@(T.Node UD [u, d]) old =
                       | otherwise -> old
    T.Node UD [u', d'] | u == d' -> T.Node UD [old, d]
                       | d == u' -> T.Node UD [u, old]
-                      | otherwise -> old
+                      | otherwise ->
+                        let newA = combine new a
+                            newB = combine new b
+                        in
+                         if newA /= a then old {T.subForest = [newA, b]}
+                         else if newB /= b then old {T.subForest = [a, newB]}
+                              else old
 combine _ old = old
 
 
@@ -67,9 +79,12 @@ main :: IO ()
 main = do
   decomps <- (simplifyDecomps <$>) <$> parseWikimedia
   let seedtree = fromJust . join $ (M.lookup '孔' <$> decomps)
-  let tree = combine (fromJust . join $ (M.lookup '孟' <$> decomps)) seedtree
+  let tree'' = combine (fromJust . join $ (M.lookup '孟' <$> decomps)) seedtree
+  let tree' = combine (fromJust . join $ (M.lookup '好' <$> decomps)) tree''
+  -- let tree' = combine (fromJust . join $ (M.lookup '委' <$> decomps)) tree''
+  -- let tree = combine (fromJust . join $ (M.lookup '妝' <$> decomps)) tree'
   let strTree = (\c -> case c of
                        P c' -> [c']
                        LR -> "LR"
-                       UD -> "UD") <$> tree
+                       UD -> "UD") <$> tree'
   putStrLn (T.drawTree strTree)
