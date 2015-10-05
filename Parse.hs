@@ -34,16 +34,15 @@ ckMap = M.fromList [ ('一', Prim)
                    , ('+', Super)
                    , ('*', Deform) ]
 
-data Decomp = D { charOf :: Char
-                , fst :: Char
-                , snd :: Char 
+data Decomp = D { fstOf :: Char
+                , sndOf :: Char
                 , compKindOf :: CompKind }
               deriving Show
 
 getCK :: Char -> Maybe CompKind
-getCK = (flip M.lookup) ckMap
+getCK = flip M.lookup ckMap
 
-decomp :: Parser (Maybe Decomp)
+decomp :: Parser (Maybe (Char, Decomp))
 decomp = do
   spaces
   hanzi <- satisfy (not . isSpace)
@@ -59,19 +58,19 @@ decomp = do
   optional (char '?')
   spaces
   many (noneOf "\n")
-  return $ D hanzi fstPt sndPt <$> (getCK compkind)
+  return $ ((,) hanzi) <$> D fstPt sndPt <$> (getCK compkind)
 
-table :: Parser [Decomp]
-table = catMaybes <$> decomp `endBy` char '\n'
-
-testComp :: String
-testComp = "        一       1       一       一       1               *       0               M       *"
+table :: Parser (M.Map Char Decomp)
+table = M.fromList . catMaybes <$> decomp `endBy` char '\n'
 
 wikimedia :: FilePath
 wikimedia = "wikimedia_decomp.txt"
 
-parseWikimedia :: IO ()
+parseWikimedia :: IO (Maybe (M.Map Char Decomp))
 parseWikimedia = do
   contents <- readFile wikimedia
   let decomps = runParser table () wikimedia contents
-  print (take 5 <$> decomps)
+  case decomps of
+   Left _ -> return Nothing
+   Right dc -> return $ Just dc
+  -- print (take 5 <$> M.toList <$> decomps)
