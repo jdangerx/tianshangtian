@@ -20,21 +20,21 @@ combine new@(T.Node LR [l, r]) old =
   case old of
    T.Node rl@(P _) _ -> if T.rootLabel l == rl || T.rootLabel r == rl
                        then new else old
-   T.Node LR [l', r'] | l == r' -> T.Node LR [old, new]
-                      | r == l' -> T.Node LR [new, old]
+   T.Node LR [l', r'] | l == r' -> T.Node LR [old, r]
+                      | r == l' -> T.Node LR [l, old]
                       | otherwise -> old
-   T.Node UD [u', d'] | l == u' || l == d' -> T.Node LR [old, new]
-                      | r == u' || r == d' -> T.Node LR [new, old]
+   T.Node UD [u', d'] | l == u' || l == d' -> T.Node LR [old, r]
+                      | r == u' || r == d' -> T.Node LR [l, old]
                       | otherwise -> old
 combine new@(T.Node UD [u, d]) old =
   case old of
    T.Node rl@(P _) _ -> if T.rootLabel u == rl || T.rootLabel d == rl
                        then new else old
-   T.Node LR [l', r'] | u == l' || u == r' -> T.Node UD [old, new]
-                      | d == l' || d == r' -> T.Node UD [new, old]
+   T.Node LR [l', r'] | u == l' || u == r' -> T.Node UD [old, d]
+                      | d == l' || d == r' -> T.Node UD [u, old]
                       | otherwise -> old
-   T.Node UD [u', d'] | u == d' -> T.Node UD [old, new]
-                      | d == u' -> T.Node UD [new, old]
+   T.Node UD [u', d'] | u == d' -> T.Node UD [old, d]
+                      | d == u' -> T.Node UD [u, old]
                       | otherwise -> old
 combine _ old = old
 
