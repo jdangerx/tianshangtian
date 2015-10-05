@@ -16,34 +16,28 @@ type SuperChar = T.Tree Component
 
 combine :: SuperChar -> SuperChar -> SuperChar
 combine (T.Node (P _) _) old = old
-combine new@(T.Node LR (l:r:[])) old =
+combine new@(T.Node LR [l, r]) old =
   case old of
-   T.Node rl@(P c) _ -> if T.rootLabel l == rl || T.rootLabel r == rl
+   T.Node rl@(P _) _ -> if T.rootLabel l == rl || T.rootLabel r == rl
                        then new else old
-   T.Node LR (l':r':[]) -> if l == r'
-                               then T.Node LR [old, new]
-                               else if r == l'
-                                    then T.Node LR [new, old]
-                                    else old
-   T.Node UD (u':d':[]) -> if l == u' || l == d'
-                          then T.Node LR [old, new]
-                          else if r == u' || r == d'
-                               then T.Node LR [new, old]
-                               else old
-combine new@(T.Node UD (u:d:[])) old =
+   T.Node LR [l', r'] | l == r' -> T.Node LR [old, new]
+                      | r == l' -> T.Node LR [new, old]
+                      | otherwise -> old
+   T.Node UD [u', d'] | l == u' || l == d' -> T.Node LR [old, new]
+                      | r == u' || r == d' -> T.Node LR [new, old]
+                      | otherwise -> old
+combine new@(T.Node UD [u, d]) old =
   case old of
-   T.Node rl@(P c) _ -> if T.rootLabel u == rl || T.rootLabel d == rl
+   T.Node rl@(P _) _ -> if T.rootLabel u == rl || T.rootLabel d == rl
                        then new else old
-   T.Node LR (l':r':[]) -> if u == l' || u == r'
-                          then T.Node UD [old, new]
-                               else if d == l' || d == r'
-                                    then T.Node UD [new, old]
-                                    else old
-   T.Node UD (u':d':[]) -> if u == d'
-                          then T.Node UD [old, new]
-                          else if d == u'
-                               then T.Node UD [new, old]
-                               else old
+   T.Node LR [l', r'] | u == l' || u == r' -> T.Node UD [old, new]
+                      | d == l' || d == r' -> T.Node UD [new, old]
+                      | otherwise -> old
+   T.Node UD [u', d'] | u == d' -> T.Node UD [old, new]
+                      | d == u' -> T.Node UD [new, old]
+                      | otherwise -> old
+combine _ old = old
+
 
 expand :: M.Map Char Decomp -> Decomp -> Maybe SuperChar
 expand _ (D {compKindOf = Prim, fstOf = c}) = Just $ T.Node (P c) []
@@ -72,7 +66,8 @@ simplifyDecomps = M.map fromJust . M.filter isJust . M.map expand'
 main :: IO ()
 main = do
   decomps <- (simplifyDecomps <$>) <$> parseWikimedia
-  let tree = fromJust . join $ (M.lookup '受' <$> decomps)
+  let seedtree = fromJust . join $ (M.lookup '孔' <$> decomps)
+  let tree = combine (fromJust . join $ (M.lookup '孟' <$> decomps)) seedtree
   let strTree = (\c -> case c of
                        P c' -> [c']
                        LR -> "LR"
