@@ -84,25 +84,35 @@ prims sc =
 choice :: [a] -> IO a
 choice ls = liftM (ls !!) (randomRIO (0, length ls - 1))
 
-next :: M.Map Char SuperChar -> SuperChar -> IO SuperChar
-next m c =
+next :: M.Map Char SuperChar -> (SuperChar, [Char]) -> IO (SuperChar, [Char])
+next m (c, ls) =
   let
     cPrims = prims c
-    potSCs = M.elems . M.filter (\sc -> prims sc `intersect` cPrims /= []) $ m
-    potNewTrees = catMaybes ((`combine` c) <$> potSCs)
-  in choice potNewTrees
+    potSCs = M.filter (\sc -> prims sc `intersect` cPrims /= []) $ m
+    potNewTrees = catMaybes
+                  (
+                    (\(char, sc) -> liftM2 (,) (sc `combine` c) (Just char))
+                    <$> M.toList potSCs
+                  )
+  in
+   do
+     (nextSuperChar, nextChar) <- choice potNewTrees
+     let newLs = nextChar : ls
+     return (nextSuperChar, newLs)
 
-accrete :: M.Map Char SuperChar -> SuperChar -> Int -> IO SuperChar
-accrete m c 0 = return c
-accrete m c n = (accrete m c (n-1)) >>= (next m)
+accrete :: M.Map Char SuperChar -> (SuperChar, [Char]) -> Int -> IO (SuperChar, [Char])
+accrete _ c 0 = return c
+accrete m c n = accrete m c (n-1) >>= next m
 
 main :: IO ()
 main = do
   decomps <- (simplifyDecomps <$>) <$> parseWikimedia
-  let seed = fromJust . join $ (M.lookup '和' <$> decomps)
-  tree5 <- accrete (fromJust decomps) seed 2
+  let seedChar = '孔'
+  let seed = fromJust . join $ (M.lookup seedChar <$> decomps)
+  (tree5, chars) <- accrete (fromJust decomps) (seed, [seedChar]) 4
   let strTree' = (\c -> case c of
                         P c' -> [c']
                         LR -> "LR"
                         UD -> "UD") <$> tree5
   putStrLn $ T.drawTree strTree'
+  putStrLn $ reverse chars
