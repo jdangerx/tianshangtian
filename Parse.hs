@@ -72,5 +72,5 @@ parseWikimedia = do
   let decomps = runParser table () wikimedia contents
   case decomps of
    Left _ -> return Nothing
-   Right dc -> return $ Just dc
+   Right dc -> return $ Just (M.delete '*' dc)
   -- print (take 5 <$> M.toList <$> decomps)

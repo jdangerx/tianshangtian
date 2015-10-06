@@ -1,11 +1,14 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Accrete where
 
+import Data.Aeson
 import Control.Monad
 import Data.List (intersect)
 import qualified Data.Map as M
 import Data.Maybe (isJust, fromJust, catMaybes, mapMaybe)
 import qualified Data.Tree as T
 import System.Random (randomRIO)
+import qualified Data.Text as T
 
 import Parse
 
@@ -13,6 +16,13 @@ data Component = P Char
                | UD
                | LR
                  deriving (Show, Eq)
+
+instance ToJSON Component where
+  toJSON (P c) = String $ T.pack [c]
+  toJSON LR = String "LR"
+  toJSON UD = String "UD"
+
+data Branch = Left | Right
 
 type SuperChar = T.Tree Component
 
@@ -26,7 +36,7 @@ foo new old a b =
         else Nothing
 
 combine :: SuperChar -> SuperChar -> Maybe SuperChar
-combine (T.Node (P _) _) old = Nothing
+combine (T.Node (P _) _) _ = Nothing
 combine new@(T.Node LR [l, r]) old@(T.Node _ [a, b]) =
   case old of
    T.Node rl@(P _) _ -> if T.rootLabel l == rl || T.rootLabel r == rl
@@ -84,11 +94,11 @@ prims sc =
 choice :: [a] -> IO a
 choice ls = liftM (ls !!) (randomRIO (0, length ls - 1))
 
-next :: M.Map Char SuperChar -> (SuperChar, [Char]) -> IO (SuperChar, [Char])
+next :: M.Map Char SuperChar -> (SuperChar, String) -> IO (SuperChar, String)
 next m (c, ls) =
   let
     cPrims = prims c
-    potSCs = M.filter (\sc -> prims sc `intersect` cPrims /= []) $ m
+    potSCs = M.filter (\sc -> prims sc `intersect` cPrims /= []) m
     potNewTrees = catMaybes
                   (
                     (\(char, sc) -> liftM2 (,) (sc `combine` c) (Just char))
@@ -100,19 +110,27 @@ next m (c, ls) =
      let newLs = nextChar : ls
      return (nextSuperChar, newLs)
 
-accrete :: M.Map Char SuperChar -> (SuperChar, [Char]) -> Int -> IO (SuperChar, [Char])
+accrete :: M.Map Char SuperChar -> (SuperChar, String) -> Int -> IO (SuperChar, String)
 accrete _ c 0 = return c
 accrete m c n = accrete m c (n-1) >>= next m
 
-main :: IO ()
-main = do
-  decomps <- (simplifyDecomps <$>) <$> parseWikimedia
-  let seedChar = '孔'
-  let seed = fromJust . join $ (M.lookup seedChar <$> decomps)
-  (tree5, chars) <- accrete (fromJust decomps) (seed, [seedChar]) 4
-  let strTree' = (\c -> case c of
-                        P c' -> [c']
-                        LR -> "LR"
-                        UD -> "UD") <$> tree5
-  putStrLn $ T.drawTree strTree'
-  putStrLn $ reverse chars
+toStrTree :: SuperChar -> T.Tree String
+toStrTree =
+  let
+    convert (P c') = [c']
+    convert LR = "LR"
+    convert UD = "UD"
+  in
+   (<$>) convert
+-- main :: IO ()
+-- main = do
+--   decomps <- (simplifyDecomps <$>) <$> parseWikimedia
+--   let seedChar = '孔'
+--   let seed = fromJust . join $ (M.lookup seedChar <$> decomps)
+--   (tree5, chars) <- accrete (fromJust decomps) (seed, [seedChar]) 4
+--   let strTree' = (\c -> case c of
+--                         P c' -> [c']
+--                         LR -> "LR"
+--                         UD -> "UD") <$> tree5
+--   putStrLn $ T.drawTree strTree'
+--   putStrLn $ reverse chars
