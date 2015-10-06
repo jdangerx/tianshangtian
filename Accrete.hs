@@ -1,11 +1,13 @@
 module Accrete where
 
-import qualified Data.Map as M
-import Data.Maybe (isJust, fromJust, catMaybes)
-import qualified Data.Tree as T
 import Control.Monad
-import Parse
+import Data.List (intersect)
+import qualified Data.Map as M
+import Data.Maybe (isJust, fromJust, catMaybes, mapMaybe)
+import qualified Data.Tree as T
+import System.Random (randomRIO)
 
+import Parse
 
 data Component = P Char
                | UD
@@ -14,53 +16,38 @@ data Component = P Char
 
 type SuperChar = T.Tree Component
 
-combine :: SuperChar -> SuperChar -> SuperChar
-combine (T.Node (P _) _) old = old
+foo :: SuperChar -> SuperChar -> SuperChar -> SuperChar -> Maybe SuperChar
+foo new old a b =
+  let newA = combine new a
+      newB = combine new b
+  in
+   if isJust newA  then Just $ old {T.subForest = [fromJust newA, b]}
+   else if isJust newB then Just $ old {T.subForest = [a, fromJust newB]}
+        else Nothing
+
+combine :: SuperChar -> SuperChar -> Maybe SuperChar
+combine (T.Node (P _) _) old = Nothing
 combine new@(T.Node LR [l, r]) old@(T.Node _ [a, b]) =
   case old of
    T.Node rl@(P _) _ -> if T.rootLabel l == rl || T.rootLabel r == rl
-                       then new else old
-   T.Node LR [l', r'] | l == r' -> T.Node LR [old, r]
-                      | r == l' -> T.Node LR [l, old]
-                      | otherwise ->
-                        let newA = combine new a
-                            newB = combine new b
-                        in
-                         if newA /= a then old {T.subForest = [newA, b]}
-                         else if newB /= b then old {T.subForest = [a, newB]}
-                              else old
-   T.Node UD [u', d'] | l == u' || l == d' -> T.Node LR [old, r]
-                      | r == u' || r == d' -> T.Node LR [l, old]
-                      | otherwise ->
-                        let newA = combine new a
-                            newB = combine new b
-                        in
-                         if newA /= a then old {T.subForest = [newA, b]}
-                         else if newB /= b then old {T.subForest = [a, newB]}
-                              else old
+                       then Just new else Nothing
+   T.Node LR [l', r'] | l == r' -> Just $ T.Node LR [old, r]
+                      | r == l' -> Just $ T.Node LR [l, old]
+                      | otherwise -> foo new old a b
+   T.Node UD [u', d'] | l == u' || l == d' -> Just $ T.Node LR [old, r]
+                      | r == u' || r == d' -> Just $ T.Node LR [l, old]
+                      | otherwise -> foo new old a b
 combine new@(T.Node UD [u, d]) old@(T.Node _ [a, b]) =
   case old of
    T.Node rl@(P _) _ -> if T.rootLabel u == rl || T.rootLabel d == rl
-                       then new else old
-   T.Node LR [l', r'] | u == l' || u == r' -> T.Node UD [old, d]
-                      | d == l' || d == r' -> T.Node UD [u, old]
-                      | otherwise ->
-                        let newA = combine new a
-                            newB = combine new b
-                        in
-                         if newA /= a then old {T.subForest = [newA, b]}
-                         else if newB /= b then old {T.subForest = [a, newB]}
-                              else old
-   T.Node UD [u', d'] | u == d' -> T.Node UD [old, d]
-                      | d == u' -> T.Node UD [u, old]
-                      | otherwise ->
-                        let newA = combine new a
-                            newB = combine new b
-                        in
-                         if newA /= a then old {T.subForest = [newA, b]}
-                         else if newB /= b then old {T.subForest = [a, newB]}
-                              else old
-combine _ old = old
+                       then Just new else Nothing
+   T.Node LR [l', r'] | u == l' || u == r' -> Just $ T.Node UD [old, d]
+                      | d == l' || d == r' -> Just $ T.Node UD [u, old]
+                      | otherwise -> foo new old a b
+   T.Node UD [u', d'] | u == d' -> Just $ T.Node UD [old, d]
+                      | d == u' -> Just $ T.Node UD [u, old]
+                      | otherwise -> foo new old a b
+combine _ _ = Nothing
 
 
 expand :: M.Map Char Decomp -> Decomp -> Maybe SuperChar
@@ -87,23 +74,35 @@ expand' = expand M.empty
 simplifyDecomps :: M.Map Char Decomp -> M.Map Char SuperChar
 simplifyDecomps = M.map fromJust . M.filter isJust . M.map expand'
 
+prims :: SuperChar -> String
+prims sc =
+  let
+    toChar (P c) = Just c
+    toChar _ = Nothing
+  in mapMaybe toChar . T.flatten $ sc
+
+choice :: [a] -> IO a
+choice ls = liftM (ls !!) (randomRIO (0, length ls - 1))
+
+next :: M.Map Char SuperChar -> SuperChar -> IO SuperChar
+next m c =
+  let
+    cPrims = prims c
+    potSCs = M.elems . M.filter (\sc -> prims sc `intersect` cPrims /= []) $ m
+    potNewTrees = catMaybes ((`combine` c) <$> potSCs)
+  in choice potNewTrees
+
+accrete :: M.Map Char SuperChar -> SuperChar -> Int -> IO SuperChar
+accrete m c 0 = return c
+accrete m c n = (accrete m c (n-1)) >>= (next m)
+
 main :: IO ()
 main = do
   decomps <- (simplifyDecomps <$>) <$> parseWikimedia
-  let seedtree = fromJust . join $ (M.lookup '孔' <$> decomps)
-  let tree''' = combine (fromJust . join $ (M.lookup '孟' <$> decomps)) seedtree
-  let tree'' = combine (fromJust . join $ (M.lookup '好' <$> decomps)) tree'''
-  let tree' = combine (fromJust . join $ (M.lookup '学' <$> decomps)) tree''
-  -- let tree' = fromJust . join $ (M.lookup '学' <$> decomps)
-  -- let tree = combine (fromJust . join $ (M.lookup '和' <$> decomps)) tree'
-  -- let tree = combine (fromJust . join $ (M.lookup '妝' <$> decomps)) tree'
-  let strTree = (\c -> case c of
-                       P c' -> [c']
-                       LR -> "LR"
-                       UD -> "UD") <$> tree''
+  let seed = fromJust . join $ (M.lookup '和' <$> decomps)
+  tree5 <- accrete (fromJust decomps) seed 2
   let strTree' = (\c -> case c of
-                       P c' -> [c']
-                       LR -> "LR"
-                       UD -> "UD") <$> tree'
-  putStrLn (T.drawTree strTree)
-  putStrLn (T.drawTree strTree')
+                        P c' -> [c']
+                        LR -> "LR"
+                        UD -> "UD") <$> tree5
+  putStrLn $ T.drawTree strTree'
