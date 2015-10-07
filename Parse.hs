@@ -3,7 +3,9 @@
 module Parse where
 
 import Data.Char (isSpace)
-import Data.Maybe (catMaybes)
+import Data.Either (either)
+import Data.Maybe (catMaybes, fromJust)
+import Data.Set (fromList, member)
 import qualified Data.Map as M
 import Text.Parsec
 import Text.Parsec.String
@@ -66,11 +68,26 @@ table = M.fromList . catMaybes <$> decomp `endBy` char '\n'
 wikimedia :: FilePath
 wikimedia = "wikimedia_decomp.txt"
 
+common5k :: FilePath
+common5k = "5000-common-characters.csv"
+
+charsLine :: Parser String
+charsLine = noneOf "," `sepBy` char ','
+
+commonChars :: Parser String
+commonChars = concat <$> charsLine `endBy` char '\n'
+
+parse5KCommon :: IO (Maybe String)
+parse5KCommon =
+  either (const Nothing) Just
+  <$> runParser commonChars () common5k
+  <$> readFile common5k
+
 parseWikimedia :: IO (Maybe (M.Map Char Decomp))
 parseWikimedia = do
   contents <- readFile wikimedia
   let decomps = runParser table () wikimedia contents
+  commons <- fromList . fromJust <$> parse5KCommon
   case decomps of
    Left _ -> return Nothing
-   Right dc -> return $ Just (M.delete '*' dc)
-  -- print (take 5 <$> M.toList <$> decomps)
+   Right dc -> return $ Just (M.filterWithKey (\k _ -> k `member` commons) dc)

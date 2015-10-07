@@ -27,13 +27,21 @@ data Branch = Left | Right
 type SuperChar = T.Tree Component
 
 foo :: SuperChar -> SuperChar -> SuperChar -> SuperChar -> Maybe SuperChar
-foo new old a b =
+foo new@(T.Node LR _) old@(T.Node UD _) a b =
   let newA = combine new a
       newB = combine new b
   in
    if isJust newA  then Just $ old {T.subForest = [fromJust newA, b]}
    else if isJust newB then Just $ old {T.subForest = [a, fromJust newB]}
         else Nothing
+foo new@(T.Node UD _) old@(T.Node LR _) a b =
+  let newA = combine new a
+      newB = combine new b
+  in
+   if isJust newA  then Just $ old {T.subForest = [fromJust newA, b]}
+   else if isJust newB then Just $ old {T.subForest = [a, fromJust newB]}
+        else Nothing
+foo _ _ _ _ = Nothing
 
 combine :: SuperChar -> SuperChar -> Maybe SuperChar
 combine (T.Node (P _) _) _ = Nothing
@@ -91,10 +99,11 @@ prims sc =
     toChar _ = Nothing
   in mapMaybe toChar . T.flatten $ sc
 
-choice :: [a] -> IO a
-choice ls = liftM (ls !!) (randomRIO (0, length ls - 1))
+choice :: [a] -> IO (Maybe a)
+choice [] = pure Nothing
+choice ls = Just <$> liftM (ls !!) (randomRIO (0, length ls - 1))
 
-next :: M.Map Char SuperChar -> (SuperChar, String) -> IO (SuperChar, String)
+next :: M.Map Char SuperChar -> (SuperChar, String) -> IO (Maybe (SuperChar, String))
 next m (c, ls) =
   let
     cPrims = prims c
@@ -106,13 +115,20 @@ next m (c, ls) =
                   )
   in
    do
-     (nextSuperChar, nextChar) <- choice potNewTrees
-     let newLs = nextChar : ls
-     return (nextSuperChar, newLs)
+     choiceM <- choice potNewTrees
+     case choiceM of
+      Nothing -> return Nothing
+      Just (nextSuperChar, nextChar) ->
+        return $ Just (nextSuperChar, nextChar : ls)
 
 accrete :: M.Map Char SuperChar -> (SuperChar, String) -> Int -> IO (SuperChar, String)
 accrete _ c 0 = return c
-accrete m c n = accrete m c (n-1) >>= next m
+accrete m c n = do
+  smaller <- accrete m c (n-1)
+  nextCharM <- next m smaller
+  case nextCharM of
+   Nothing -> return smaller
+   Just nextChar -> return nextChar
 
 toStrTree :: SuperChar -> T.Tree String
 toStrTree =

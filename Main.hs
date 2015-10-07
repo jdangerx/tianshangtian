@@ -16,7 +16,7 @@ import Accrete
 main :: IO ()
 main = do
   decomps <- fromJust <$> (simplifyDecomps <$>) <$> parseWikimedia
-  scotty 3000 $ 
+  scotty 3000 $
     get "/:char/:num" $ do
       accept <- header "Accept"
       char <- param "char"
@@ -29,11 +29,7 @@ main = do
           Nothing -> html "You don't want anything, and I'm not gonna give it to you."
           Just something ->
             do
-              complete <- liftIO (fst <$> accrete decomps (sc, [char]) num)
+              (complete, chars) <- liftIO (accrete decomps (sc, [char]) num)
               if "text/html" `elem` splitOn "," something
-                then text $ pack . drawTree . toStrTree $ complete
+                then text $ pack . (++ reverse chars) . drawTree . toStrTree $ complete
                 else Web.Scotty.json complete
-              -- Web.Scotty.json complete
-     
-
-
