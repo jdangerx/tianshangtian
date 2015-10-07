@@ -1,13 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Control.Monad
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.Map as M
 import Data.Maybe (fromJust)
 import Data.Text.Lazy (splitOn, pack)
 import Data.Tree (drawTree)
-import Data.Aeson
 import Web.Scotty
 
 import Parse (parseWikimedia)

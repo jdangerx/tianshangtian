@@ -138,15 +138,3 @@ toStrTree =
     convert UD = "UD"
   in
    (<$>) convert
--- main :: IO ()
--- main = do
---   decomps <- (simplifyDecomps <$>) <$> parseWikimedia
---   let seedChar = '孔'
---   let seed = fromJust . join $ (M.lookup seedChar <$> decomps)
---   (tree5, chars) <- accrete (fromJust decomps) (seed, [seedChar]) 4
---   let strTree' = (\c -> case c of
---                         P c' -> [c']
---                         LR -> "LR"
---                         UD -> "UD") <$> tree5
---   putStrLn $ T.drawTree strTree'
---   putStrLn $ reverse chars
