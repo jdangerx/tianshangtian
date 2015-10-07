@@ -3,13 +3,13 @@
 module Parse where
 
 import Data.Char (isSpace)
-import Data.Either (either)
 import Data.Maybe (catMaybes, fromJust)
 import Data.Set (fromList, member)
 import qualified Data.Map as M
 import Text.Parsec
 import Text.Parsec.String
 
+-- Types of composition defined in the wikimedia commons decomposition data
 data CompKind = Prim
               | Ho
               | Vert
@@ -23,6 +23,7 @@ data CompKind = Prim
               | Deform
                 deriving Show
 
+-- correspondence from the char we pick up from the text file and the compkind
 ckMap :: M.Map Char CompKind
 ckMap = M.fromList [ ('一', Prim)
                    , ('吅', Ho)
@@ -41,9 +42,7 @@ data Decomp = D { fstOf :: Char
                 , compKindOf :: CompKind }
               deriving Show
 
-getCK :: Char -> Maybe CompKind
-getCK = flip M.lookup ckMap
-
+-- parse a line of the TSV. lots of whitespace.
 decomp :: Parser (Maybe (Char, Decomp))
 decomp = do
   spaces
@@ -60,8 +59,9 @@ decomp = do
   optional (char '?')
   spaces
   many (noneOf "\n")
-  return $ (,) hanzi <$> D fstPt sndPt <$> getCK compkind
+  return $ (,) hanzi <$> D fstPt sndPt <$> (compkind `M.lookup` ckMap)
 
+-- parse the whole table!
 table :: Parser (M.Map Char Decomp)
 table = M.fromList . catMaybes <$> decomp `endBy` char '\n'
 
@@ -77,17 +77,19 @@ charsLine = noneOf "," `sepBy` char ','
 commonChars :: Parser String
 commonChars = concat <$> charsLine `endBy` char '\n'
 
-parse5KCommon :: IO (Maybe String)
-parse5KCommon =
+-- get the 5000 most common chinese characters in one string
+parseCommon5k :: IO (Maybe String)
+parseCommon5k =
   either (const Nothing) Just
   <$> runParser commonChars () common5k
   <$> readFile common5k
 
+-- get a nice map from common chinese characters to their decomps
 parseWikimedia :: IO (Maybe (M.Map Char Decomp))
 parseWikimedia = do
   contents <- readFile wikimedia
   let decomps = runParser table () wikimedia contents
-  commons <- fromList . fromJust <$> parse5KCommon
+  commons <- fromList . fromJust <$> parseCommon5k
   case decomps of
    Left _ -> return Nothing
    Right dc -> return $ Just (M.filterWithKey (\k _ -> k `member` commons) dc)

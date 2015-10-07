@@ -24,7 +24,7 @@ main = do
        Nothing -> text "no such char found"
        Just sc ->
          case accept of
-          Nothing -> html "You don't want anything, and I'm not gonna give it to you."
+          Nothing -> text "You don't want anything, and I'm not gonna give it to you."
           Just something ->
             do
               (complete, chars) <- liftIO (accrete decomps (sc, [char]) num)
