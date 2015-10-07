@@ -1,3 +1,5 @@
+var SIZE = 400;
+
 window.onload = function () {
   var button = document.getElementById("go");
   button.onclick = sendRequest;
@@ -28,11 +30,12 @@ function handleSuccess(data) {
         list = parsed.slice(-1)[0],
         tree = parsed.slice(0,-1)[0];
     document.getElementById("list").innerHTML = list;
+    document.getElementById("char").innerHTML = "";
     render(tree, "char");
   }
 }
 
-function render(tree, pos) {
+function render(tree, eltId, topLeft) {
   var head = tree[0],
       subtree = tree[1],
       elt,
@@ -41,16 +44,18 @@ function render(tree, pos) {
       charDiv,
       subEltA,
       subEltB;
+  topLeft = topLeft || [0, 0];
   charDiv = document.getElementById("char");
-  elt = document.getElementById(pos);
+  charDiv.style.transform = "translate(5em, 5em)";
+  elt = document.getElementById(eltId);
   if (head === "UD" || head === "LR") {
     fst = subtree[0];
     snd = subtree[1];
     subEltA = document.createElement("span");
-    subEltA.id = pos + head[0];
+    subEltA.id = eltId + head[0];
     setStyle(subEltA);
     subEltB = document.createElement("span");
-    subEltB.id = pos + head[1];
+    subEltB.id = eltId + head[1];
     setStyle(subEltB);
     charDiv.appendChild(subEltA);
     charDiv.appendChild(subEltB);
@@ -62,14 +67,29 @@ function render(tree, pos) {
 }
 
 function setStyle(elt) {
-  var scale,
-      translate,
+  var scale = [1,1],
+      translate = [0,0],
       pos,
       i,
       p;
   elt.style.position = "absolute";
+  elt.style.fontSize = SIZE + "px";
   pos = elt.id.slice(4);
   for (i = 0; i < pos.length; i++) {
-    console.log(pos[i]);
+    p = pos[i];
+    if (p === "L") {
+      scale[0] *= 0.5;
+    } else if (p == "R") {
+      scale[0] *= 0.5;
+      translate[0] += (SIZE - translate[0])/2;
+    } else if (p == "U") {
+      scale[1] *= 0.5;
+    } else if (p == "D") {
+      scale[1] *= 0.5;
+      translate[1] += (SIZE - translate[0])/2;
+    }
   }
+  elt.style.transform = "scale(" + scale[0] + ", " + scale[1] + ")";
+  elt.style.left = translate[0] + "px";
+  elt.style.top = translate[1] + "px";
 }
