@@ -2,30 +2,27 @@
     font-size: 8em;
 }
 
-#char span, #char div {
-    width: 1em;
-    line-height: 1em;
-}
-
 #char span {
     float: left;
+    line-height: 0.5em;
 }
 
-#char span:not(:only-child) {
-    width: 0.5em;
-    /* font-size: 0.5em; */
-    /* transform: scaleX(2); */
-}
-
-#char span.c {
-    /* border: 2px solid red; */
-    background: lightgray;
-    /* width: 0.5em; */
-    /* transform: scaleX(0.5); */
+#char span, #char div {
+    transform-origin: 0 0;
 }
 
 #char div {
     clear: both;
+}
+
+#char div span:only-child {
     font-size: 0.5em;
-    /* transform: scaleX(2); */
+    width: 1em;
+    transform: scaleX(2);
+}
+
+#char span:not(:only-child) span {
+    /* font-size: 0.5em; */
+    width: 0.5em;
+    transform: scaleX(1);
 }

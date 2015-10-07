@@ -13,6 +13,7 @@ function sendRequest() {
   xhr.setRequestHeader("Accept", "application/json");
   xhr.onload = function() {
     if (xhr.status === 200) {
+      // handleSuccess(xhr.responseText);
       handleSuccess(xhr.responseText);
     }
     else {
@@ -29,6 +30,17 @@ function handleSuccess(data) {
     var parsed = JSON.parse(data),
         list = parsed.slice(-1)[0],
         tree = parsed.slice(0,-1)[0];
+
+    tree = ["UD",
+            [
+              ["折", []],
+              ["LR", [
+                ["口", []],
+                ["合", []]
+              ]
+              ]
+            ]
+           ];
     document.getElementById("list").innerHTML = list;
     document.getElementById("char").innerHTML = "";
     render(tree, "char");
