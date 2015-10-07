@@ -1,0 +1,31 @@
+#char {
+    font-size: 8em;
+}
+
+#char span, #char div {
+    width: 1em;
+    line-height: 1em;
+}
+
+#char span {
+    float: left;
+}
+
+#char span:not(:only-child) {
+    width: 0.5em;
+    /* font-size: 0.5em; */
+    /* transform: scaleX(2); */
+}
+
+#char span.c {
+    /* border: 2px solid red; */
+    background: lightgray;
+    /* width: 0.5em; */
+    /* transform: scaleX(0.5); */
+}
+
+#char div {
+    clear: both;
+    font-size: 0.5em;
+    /* transform: scaleX(2); */
+}
