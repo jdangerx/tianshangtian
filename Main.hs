@@ -6,6 +6,8 @@ import qualified Data.Map as M
 import Data.Maybe (fromJust)
 import Data.Text.Lazy (splitOn, pack)
 import Data.Tree (drawTree)
+
+import Network.Wai.Middleware.Static
 import Web.Scotty
 
 import Parse (parseWikimedia)
@@ -14,7 +16,9 @@ import Accrete
 main :: IO ()
 main = do
   decomps <- fromJust <$> (simplifyDecomps <$>) <$> parseWikimedia
-  scotty 3000 $
+  scotty 3000 $ do
+    middleware $ staticPolicy (noDots >-> addBase "static")
+    get "/" $ file "index.html"
     get "/:char/:num" $ do
       accept <- header "Accept"
       char <- param "char"
@@ -30,4 +34,4 @@ main = do
               (complete, chars) <- liftIO (accrete decomps (sc, [char]) num)
               if "text/html" `elem` splitOn "," something
                 then text $ pack . (++ reverse chars) . drawTree . toStrTree $ complete
-                else Web.Scotty.json complete
+                else Web.Scotty.json (complete, reverse chars)
