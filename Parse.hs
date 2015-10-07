@@ -60,7 +60,7 @@ decomp = do
   optional (char '?')
   spaces
   many (noneOf "\n")
-  return $ ((,) hanzi) <$> D fstPt sndPt <$> (getCK compkind)
+  return $ (,) hanzi <$> D fstPt sndPt <$> getCK compkind
 
 table :: Parser (M.Map Char Decomp)
 table = M.fromList . catMaybes <$> decomp `endBy` char '\n'
