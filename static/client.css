@@ -2,27 +2,36 @@
     font-size: 8em;
 }
 
-#char span {
-    float: left;
-    line-height: 0.5em;
-}
-
-#char span, #char div {
+/* .row, .cell { */
+.character {
     transform-origin: 0 0;
 }
 
-#char div {
+.row {
     clear: both;
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    flex-grow: 1;
+    flex-shrink: 1;
 }
 
-#char div span:only-child {
-    font-size: 0.5em;
-    width: 1em;
-    transform: scaleX(2);
+.cell {
+    float: left;
+    position: relative;
+    /* outline: 1px dashed green; */
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    flex-shrink: 1;
+    width:1em;
+    height:1em;
+    line-height:1em;
 }
 
-#char span:not(:only-child) span {
-    /* font-size: 0.5em; */
-    width: 0.5em;
-    transform: scaleX(1);
+
+.character {
+    width:100%;
+    position: absolute;
+    /* outline: 1px dashed blue; */
 }
