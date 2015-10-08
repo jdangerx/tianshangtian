@@ -3,6 +3,8 @@ var SIZE = 400;
 window.onload = function () {
   var button = document.getElementById("go");
   button.onclick = sendRequest;
+  var renderButton = document.getElementById("render-button");
+  renderButton.onclick = renderFromInput;
 };
 
 function sendRequest() {
@@ -61,6 +63,23 @@ function handleSuccess(data) {
     }
     rescale(charDiv);
   }
+}
+
+function renderFromInput() {
+  var charDiv = document.getElementById("char");
+  charDiv.innerHTML = "";
+  var tree = JSON.parse(document.getElementById("tree-in").value);
+  render(tree, charDiv);
+
+  // hack to compress things with more than one big column
+  if (tree[0] === "LR") {
+    var cells = charDiv.getElementsByClassName("cell");
+    var numCols = charDiv.childNodes.length;
+    for (var i = 0; i < cells.length; i++) {
+      cells[i].style.width = 1/numCols + "em";
+    }
+  }
+  rescale(charDiv);
 }
 
 function render(tree, elt) {
