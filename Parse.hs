@@ -55,11 +55,14 @@ decomp = do
   optional (char '?')
   spaces >> many digit >> spaces
   sndPt <-  satisfy (not . isSpace)
+  let sndPt' = case sndPt of
+                '*' -> fstPt
+                _ -> sndPt
   spaces
   optional (char '?')
   spaces
   many (noneOf "\n")
-  return $ (,) hanzi <$> D fstPt sndPt <$> (compkind `M.lookup` ckMap)
+  return $ (,) hanzi <$> D fstPt sndPt' <$> (compkind `M.lookup` ckMap)
 
 -- parse the whole table!
 table :: Parser (M.Map Char Decomp)
