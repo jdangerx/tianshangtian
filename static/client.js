@@ -32,23 +32,33 @@ function handleSuccess(data) {
         list = parsed.slice(-1)[0],
         tree = parsed.slice(0,-1)[0];
 
-    tree = ["UD",
-            [
-              ["折", []],
-              ["LR", [
-                ["LR", [["扌", []],
-                        ["口", []]]],
-                ["UD", [["土", []],
-                        ["土", []]]]
-              ]
-              ]
-            ]
-           ];
+    // tree = ["UD",
+    //         [
+    //           ["折", []],
+    //           ["LR", [
+    //             ["LR", [["扌", []],
+    //                     ["口", []]]],
+    //             ["UD", [["土", []],
+    //                     ["土", []]]]
+    //           ]
+    //           ]
+    //         ]
+    //        ];
 
     document.getElementById("list").innerHTML = list;
+    document.getElementById("tree").innerHTML = JSON.stringify(tree);
     var charDiv = document.getElementById("char");
     charDiv.innerHTML = "";
     render(tree, charDiv);
+
+    // hack to compress things with more than one big column
+    if (tree[0] === "LR") {
+      var cells = charDiv.getElementsByClassName("cell");
+      var numCols = charDiv.childNodes.length;
+      for (var i = 0; i < cells.length; i++) {
+        cells[i].style.width = 1/numCols + "em";
+      }
+    }
     rescale(charDiv);
   }
 }
@@ -102,16 +112,12 @@ function rescale(elt) {
       child.style.fontSize = 1/numChildren + "em";
       chars = child.getElementsByClassName("character");
       for (var j = 0; j < chars.length; j++) {
-        // chars[j].style.transform = "scaleX(" + numChildren + ")";
-        // chars[j].style.transform = "scaleX(" + numChildren + ")";
         compoundScale(chars[j], numChildren);
       }
     } else if (child.className == "cell") {
       chars = child.getElementsByClassName("character");
       for (var j = 0; j < chars.length; j++) {
-        // console.log(chars[j].style.transform);
         compoundScale(chars[j], 1/numChildren);
-        // chars[j].style.transform = "scaleX(" + 1/numChildren + ")";
       }
     }
     rescale(child);
@@ -122,8 +128,6 @@ function compoundScale(elt, scale) {
   var oldT = elt.getAttribute("style") || "transform: scaleX(1);",
       oldS = oldT.slice(18, -2),
       newS = oldS * scale;
-  console.log(oldS, newS);
+  console.log(elt.innerHTML, oldS, newS);
   elt.style.transform = "scaleX(" + newS + ")";
-
-  // console.log(oldT, transform);
 }
